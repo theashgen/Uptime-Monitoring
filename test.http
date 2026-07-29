@@ -1,0 +1,9 @@
+### SignUp New User
+POST http://localhost:3000/api/v1/signup
+Content-Type: application/json
+
+{
+    "username": "theashgen4",
+    "email": "theashgen1243@gmail.com",
+    "password": "theashgen@2402"
+}
