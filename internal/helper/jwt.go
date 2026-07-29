@@ -9,7 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func SignUserJWT(username string, expireAt jwt.NumericDate) (string, error) {
+func SignUserJWT(username string, expireAt time.Time) (string, error) {
 	signingKey := os.Getenv("JWT_SECRET")
 
 	if signingKey == "" {

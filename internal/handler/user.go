@@ -2,9 +2,7 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/theashgen/url-short/internal/helper"
@@ -22,7 +20,7 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 }
 
 type UserLoginRequest struct {
-	Username string `json:"username"`
+	Email    string `json:"username"`
 	Password string `json:"password"`
 }
 
@@ -59,7 +57,6 @@ func (h *UserHandler) UserSignUp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
-
 	var UserLoginDetails UserLoginRequest
 
 	err := json.NewDecoder(r.Body).Decode(&UserLoginDetails)
@@ -67,9 +64,30 @@ func (h *UserHandler) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid json format", http.StatusBadRequest)
 		return
 	}
+	user, err := h.userHandler.GetUserFromEmail(r.Context(), UserLoginDetails.Email, UserLoginDetails.Password)
+	if err != nil {
+		http.Error(w, "User email or password is wrong", http.StatusUnauthorized)
+		return
+	}
+	token, err := helper.SignUserJWT(user.Username, time.Now().Add(24*time.Hour))
+	if err != nil {
+		http.Error(w, "error while creating token", http.StatusInternalServerError)
+		return
+	}
 
-	token, ss = helper.SignUserJWT()
-	fmt.Fprint(w, "need to code this route")
+	cookie := &http.Cookie{
+		Name:     "access_token",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   24 * 60 * 60,
+	}
 
-	
+	http.SetCookie(w, cookie)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "login successful",
+	})
+	// fmt.Fprint(w, "need to code this route")
 }
