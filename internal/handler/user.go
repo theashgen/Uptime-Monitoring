@@ -56,6 +56,8 @@ func (h *UserHandler) UserSignUp(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+
+
 func (h *UserHandler) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 	var UserLoginDetails UserLoginRequest
 
@@ -75,17 +77,8 @@ func (h *UserHandler) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cookie := &http.Cookie{
-		Name:     "access_token",
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   24 * 60 * 60,
-	}
-
-	http.SetCookie(w, cookie)
+	auth.SetCookie(w, token)
+	
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "login successful",
 	})

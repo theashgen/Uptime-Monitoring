@@ -1,7 +1,7 @@
-package auth
+package middleware
 
 import (
-	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -13,39 +13,42 @@ type responseWriter struct {
 }
 
 func (rw *responseWriter) WriteHeader(code int) {
+	if rw.statusCode != 0 {
+		return
+	}
+
 	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
 }
 
 func (rw *responseWriter) Write(data []byte) (int, error) {
-	size, err := rw.ResponseWriter.Write(data)
-	rw.size += size
-	return size, err
+	if rw.statusCode == 0 {
+		rw.WriteHeader(http.StatusOK)
+	}
+
+	n, err := rw.ResponseWriter.Write(data)
+	rw.size += n
+
+	return n, err
 }
 
-func Logger(next http.HandlerFunc) http.HandlerFunc {
+func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		start := time.Now()
 
-		// Wrap response writer
 		rw := &responseWriter{
 			ResponseWriter: w,
-			statusCode:     http.StatusOK,
 		}
 
-		// Execute actual handler
 		next.ServeHTTP(rw, r)
 
-		duration := time.Since(start)
-
-		fmt.Printf(
-			"%s %s | Status: %d | Size: %d bytes | Time: %v\n",
-			r.Method,
-			r.URL.Path,
-			rw.statusCode,
-			rw.size,
-			duration,
+		slog.Info("HTTP request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", rw.statusCode,
+			"size", rw.size,
+			"duration", time.Since(start),
 		)
 	})
 }
