@@ -9,7 +9,7 @@ import (
 func NewDB() (*pgx.Conn, error) {
 	conn, err := pgx.Connect(
 		context.Background(),
-		"postgres://postgres:postgres@localhost:5432/urlshortener",
+		"postgres://ashwin@localhost:5432/urlshort?sslmode=disable",
 	)
 
 	if err != nil {

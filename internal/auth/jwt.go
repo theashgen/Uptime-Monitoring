@@ -1,7 +1,8 @@
-package helper
+package auth
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -17,15 +18,16 @@ func SignUserJWT(username string, expireAt time.Time) (string, error) {
 		return "", errors.New("Did Set the JWT_SECRET variable")
 	}
 
-	claims := &jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(time.Unix(1516239022, 0)),
-		Issuer:    "test",
+	claims := jwt.MapClaims{
+		"exp":      expireAt.Unix(),
+		"username": username,
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
-	ss, err := token.SignedString(signingKey)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	ss, err := token.SignedString([]byte(signingKey))
 
 	if err != nil {
+		fmt.Println(err.Error())
 		return "", errors.New("error while siging the token")
 	}
 

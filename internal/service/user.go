@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	"github.com/theashgen/url-short/internal/repo"
@@ -40,14 +41,31 @@ func (s *UserService) CreateUser(ctx context.Context, email, username, password 
 	return user, nil
 }
 
-func (s *UserService) GetUserFromEmail(ctx context.Context, email, password string) (repo.GetUserEmailRow, error) {
+func (s *UserService) AuthenticateUser(
+	ctx context.Context,
+	email, password string,
+) (repo.GetUserEmailRow, error) {
+	// start := time.Now()
 	user, err := s.queries.GetUserEmail(ctx, email)
+
+	// fmt.Println("DB:", time.Since(start))
+
 	if err != nil {
-		return repo.GetUserEmailRow{}, errors.New("Internal Server Err")
+		if errors.Is(err, sql.ErrNoRows) {
+			return repo.GetUserEmailRow{}, errors.New("invalid email or password")
+		}
+		return repo.GetUserEmailRow{}, err
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(user.Passwordhash), []byte(password))
-	if err != nil {
-		return repo.GetUserEmailRow{}, errors.New("Password is wrong")
+
+	// start = time.Now()
+
+	if err := bcrypt.CompareHashAndPassword(
+		[]byte(user.Passwordhash),
+		[]byte(password),
+	); err != nil {
+		return repo.GetUserEmailRow{}, errors.New("invalid email or password")
 	}
+	// fmt.Println("bcrypt:", time.Since(start))
+
 	return user, nil
 }

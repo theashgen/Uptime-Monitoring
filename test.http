@@ -3,7 +3,16 @@ POST http://localhost:3000/api/v1/signup
 Content-Type: application/json
 
 {
-    "username": "theashgen4",
-    "email": "theashgen1243@gmail.com",
+    "username": "theashgen1234",
+    "email": "theashgen1234@gmail.com",
+    "password": "theashgen@2402"
+}
+
+### Login
+POST http://localhost:3000/api/v1/login
+Content-Type: application/json
+
+{
+    "email": "theashgen1234@gmail.com",
     "password": "theashgen@2402"
 }

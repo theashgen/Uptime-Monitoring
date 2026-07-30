@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/theashgen/url-short/internal/helper"
+	"github.com/theashgen/url-short/internal/auth"
 	"github.com/theashgen/url-short/internal/service"
 )
 
@@ -20,7 +20,7 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 }
 
 type UserLoginRequest struct {
-	Email    string `json:"username"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
@@ -64,12 +64,12 @@ func (h *UserHandler) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid json format", http.StatusBadRequest)
 		return
 	}
-	user, err := h.userHandler.GetUserFromEmail(r.Context(), UserLoginDetails.Email, UserLoginDetails.Password)
+	user, err := h.userHandler.AuthenticateUser(r.Context(), UserLoginDetails.Email, UserLoginDetails.Password)
 	if err != nil {
-		http.Error(w, "User email or password is wrong", http.StatusUnauthorized)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	token, err := helper.SignUserJWT(user.Username, time.Now().Add(24*time.Hour))
+	token, err := auth.SignUserJWT(user.Username, time.Now().Add(24*time.Hour))
 	if err != nil {
 		http.Error(w, "error while creating token", http.StatusInternalServerError)
 		return
@@ -89,5 +89,5 @@ func (h *UserHandler) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "login successful",
 	})
-	// fmt.Fprint(w, "need to code this route")
+
 }

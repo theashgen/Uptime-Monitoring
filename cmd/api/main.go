@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/joho/godotenv"
+	"github.com/theashgen/url-short/internal/auth"
 	"github.com/theashgen/url-short/internal/database"
 	"github.com/theashgen/url-short/internal/handler"
 	"github.com/theashgen/url-short/internal/repo"
@@ -32,9 +33,10 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("POST /api/v1/signup", userHandler.UserSignUp)
-	mux.HandleFunc("POST /api/v1/login", userHandler.UserLoginHandler)
-
+	mux.HandleFunc("POST /api/v1/signup", auth.Logger(userHandler.UserSignUp))
+	mux.HandleFunc("POST /api/v1/login", auth.Logger(userHandler.UserLoginHandler))
+	// mux.Handle("GET /api/v1/me",
+	// )
 	defer db.Close(context.Background())
 
 	http.ListenAndServe(":3000", mux)
