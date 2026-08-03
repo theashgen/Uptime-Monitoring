@@ -3,27 +3,34 @@ package auth
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type UserClaims struct {
+	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
+
 func SignUserJWT(username string, expireAt time.Time) (string, error) {
 	signingKey := os.Getenv("JWT_SECRET")
 
 	if signingKey == "" {
-		log.Fatal("Set JWT_SECRET as Env variable")
+		fmt.Print("Set JWT_SECRET as Env variable")
 		return "", errors.New("Did Set the JWT_SECRET variable")
 	}
 
-	claims := jwt.MapClaims{
-		"exp":      expireAt.Unix(),
-		"username": username,
+	claims := UserClaims{
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expireAt),
+		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
 	ss, err := token.SignedString([]byte(signingKey))
 
 	if err != nil {
@@ -32,4 +39,31 @@ func SignUserJWT(username string, expireAt time.Time) (string, error) {
 	}
 
 	return ss, nil
+}
+
+func ValidateJWT(tokenString string) (*UserClaims, error) {
+	signingKey := os.Getenv("JWT_SECRET")
+	claims := &UserClaims{}
+
+	token, err := jwt.ParseWithClaims(
+		tokenString,
+		claims,
+		func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+
+			return []byte(signingKey), nil
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !token.Valid {
+		return nil, fmt.Errorf("invalid token")
+	}
+
+	return claims, nil
 }
