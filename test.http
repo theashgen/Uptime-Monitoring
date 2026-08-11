@@ -16,3 +16,15 @@ Content-Type: application/json
     "email": "theashgen1234@gmail.com",
     "password": "theashgen@2402"
 }
+
+### GET URL
+GET http://localhost:3000/api/v1/urls
+
+
+### POST URL
+POST http://localhost:3000/api/v1/urls
+Content-Type: application/json
+
+{
+    ""
+}

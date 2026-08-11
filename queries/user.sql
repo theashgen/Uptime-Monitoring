@@ -11,11 +11,10 @@ VALUES (
 )
 RETURNING email, username;
 
--- name: GetUserEmail :one
-SELECT username, passwordhash FROM users
+-- name: GetUserByEmail :one
+SELECT id, username, passwordhash FROM users
 WHERE email = $1;
 
--- name: GetUserUsername :one
-SELECT * FROM users
-WHERE email = $1
-AND passwordhash = $2;
+-- name: GetUserByUsername :one
+SELECT id, email, username FROM users
+WHERE username = $1;

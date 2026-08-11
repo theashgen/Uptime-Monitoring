@@ -15,7 +15,7 @@ import (
 
 func main() {
 
-	err := godotenv.Load()
+	err := godotenv.Load(".env.local")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -32,12 +32,18 @@ func main() {
 	userService := service.NewUserService(queries)
 	userHandler := handler.NewUserHandler(userService)
 
+	urlService := service.NewURLService(queries)
+	urlHandler := handler.NewURLHandler(urlService)
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("POST /api/v1/signup", userHandler.UserSignUp)
 	mux.HandleFunc("POST /api/v1/login", userHandler.UserLoginHandler)
 
 	handler := middleware.Logger(mux)
+
+	mux.Handle("GET /api/v1/urls",
+		middleware.AuthMiddleware(urlHandler.GetUrls),
+	)
 
 	log.Println("server running on :3000")
 

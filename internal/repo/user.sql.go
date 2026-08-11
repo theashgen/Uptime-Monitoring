@@ -7,6 +7,8 @@ package repo
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -41,42 +43,38 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 	return i, err
 }
 
-const getUserEmail = `-- name: GetUserEmail :one
-SELECT username, passwordhash FROM users
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, username, passwordhash FROM users
 WHERE email = $1
 `
 
-type GetUserEmailRow struct {
+type GetUserByEmailRow struct {
+	ID           pgtype.UUID
 	Username     string
 	Passwordhash string
 }
 
-func (q *Queries) GetUserEmail(ctx context.Context, email string) (GetUserEmailRow, error) {
-	row := q.db.QueryRow(ctx, getUserEmail, email)
-	var i GetUserEmailRow
-	err := row.Scan(&i.Username, &i.Passwordhash)
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i GetUserByEmailRow
+	err := row.Scan(&i.ID, &i.Username, &i.Passwordhash)
 	return i, err
 }
 
-const getUserUsername = `-- name: GetUserUsername :one
-SELECT id, email, username, passwordhash FROM users
-WHERE email = $1
-AND passwordhash = $2
+const getUserByUsername = `-- name: GetUserByUsername :one
+SELECT id, email, username FROM users
+WHERE username = $1
 `
 
-type GetUserUsernameParams struct {
-	Email        string
-	Passwordhash string
+type GetUserByUsernameRow struct {
+	ID       pgtype.UUID
+	Email    string
+	Username string
 }
 
-func (q *Queries) GetUserUsername(ctx context.Context, arg GetUserUsernameParams) (User, error) {
-	row := q.db.QueryRow(ctx, getUserUsername, arg.Email, arg.Passwordhash)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.Username,
-		&i.Passwordhash,
-	)
+func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error) {
+	row := q.db.QueryRow(ctx, getUserByUsername, username)
+	var i GetUserByUsernameRow
+	err := row.Scan(&i.ID, &i.Email, &i.Username)
 	return i, err
 }

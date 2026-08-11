@@ -32,6 +32,8 @@ func (rw *responseWriter) Write(data []byte) (int, error) {
 	return n, err
 }
 
+
+
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 

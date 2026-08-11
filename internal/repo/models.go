@@ -9,9 +9,9 @@ import (
 )
 
 type Url struct {
-	Actualurl pgtype.Text
-	Shortcode pgtype.Text
-	UserID    pgtype.UUID
+	Host     pgtype.Text
+	Interval pgtype.Text
+	UserID   pgtype.UUID
 }
 
 type User struct {

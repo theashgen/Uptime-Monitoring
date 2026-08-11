@@ -13,27 +13,53 @@ import (
 
 const createURL = `-- name: CreateURL :one
 INSERT INTO urls (
-    actualUrl,
-    shortCode,
-    user_id
+    host,
+    interval
 )
 VALUES (
     $1,
-    $2,
-    $3
-)
-RETURNING actualurl, shortcode, user_id
+    $2
+) RETURNING host, interval, user_id
 `
 
 type CreateURLParams struct {
-	Actualurl pgtype.Text
-	Shortcode pgtype.Text
-	UserID    pgtype.UUID
+	Host     pgtype.Text
+	Interval pgtype.Text
 }
 
 func (q *Queries) CreateURL(ctx context.Context, arg CreateURLParams) (Url, error) {
-	row := q.db.QueryRow(ctx, createURL, arg.Actualurl, arg.Shortcode, arg.UserID)
+	row := q.db.QueryRow(ctx, createURL, arg.Host, arg.Interval)
 	var i Url
-	err := row.Scan(&i.Actualurl, &i.Shortcode, &i.UserID)
+	err := row.Scan(&i.Host, &i.Interval, &i.UserID)
 	return i, err
+}
+
+const listURLsByUser = `-- name: ListURLsByUser :many
+SELECT host, interval FROM urls
+WHERE user_id = $1
+`
+
+type ListURLsByUserRow struct {
+	Host     pgtype.Text
+	Interval pgtype.Text
+}
+
+func (q *Queries) ListURLsByUser(ctx context.Context, userID pgtype.UUID) ([]ListURLsByUserRow, error) {
+	rows, err := q.db.Query(ctx, listURLsByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListURLsByUserRow
+	for rows.Next() {
+		var i ListURLsByUserRow
+		if err := rows.Scan(&i.Host, &i.Interval); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

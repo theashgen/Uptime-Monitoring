@@ -9,8 +9,8 @@ CREATE TABLE "users" (
 );
 
 CREATE TABLE urls (
-    actualUrl TEXT,
-    shortCode VARCHAR(50) UNIQUE,
+    host TEXT,
+    interval TEXT,
     user_id UUID,
     CONSTRAINT fk_user
         FOREIGN KEY (user_id)

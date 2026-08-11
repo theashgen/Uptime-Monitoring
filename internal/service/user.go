@@ -19,6 +19,19 @@ func NewUserService(queries *repo.Queries) *UserService {
 	}
 }
 
+func (s *UserService) GetUserByUsername(ctx context.Context, username string) (repo.GetUserByUsernameRow, error) {
+	if username == "" {
+		return repo.GetUserByUsernameRow{}, errors.New("provide valid username.")
+	}
+
+	user, err := s.queries.GetUserByUsername(ctx, username)
+	if err != nil {
+		return repo.GetUserByUsernameRow{}, errors.New("username doesnt exist in the database")
+	}
+
+	return user, nil
+}
+
 func (s *UserService) CreateUser(ctx context.Context, email, username, password string) (repo.CreateUserRow, error) {
 
 	if username == "" || password == "" || email == "" {
@@ -44,17 +57,17 @@ func (s *UserService) CreateUser(ctx context.Context, email, username, password 
 func (s *UserService) AuthenticateUser(
 	ctx context.Context,
 	email, password string,
-) (repo.GetUserEmailRow, error) {
+) (repo.GetUserByEmailRow, error) {
 	// start := time.Now()
-	user, err := s.queries.GetUserEmail(ctx, email)
+	user, err := s.queries.GetUserByEmail(ctx, email)
 
 	// fmt.Println("DB:", time.Since(start))
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return repo.GetUserEmailRow{}, errors.New("invalid email or password")
+			return repo.GetUserByEmailRow{}, errors.New("invalid email or password")
 		}
-		return repo.GetUserEmailRow{}, err
+		return repo.GetUserByEmailRow{}, err
 	}
 
 	// start = time.Now()
@@ -63,7 +76,7 @@ func (s *UserService) AuthenticateUser(
 		[]byte(user.Passwordhash),
 		[]byte(password),
 	); err != nil {
-		return repo.GetUserEmailRow{}, errors.New("invalid email or password")
+		return repo.GetUserByEmailRow{}, errors.New("invalid email or password")
 	}
 	// fmt.Println("bcrypt:", time.Since(start))
 

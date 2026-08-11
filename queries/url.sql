@@ -1,12 +1,13 @@
 -- name: CreateURL :one
 INSERT INTO urls (
-    actualUrl,
-    shortCode,
-    user_id
+    host,
+    interval
 )
 VALUES (
     $1,
-    $2,
-    $3
-)
-RETURNING *;
+    $2
+) RETURNING *;
+
+-- name: ListURLsByUser :many
+SELECT host, interval FROM urls
+WHERE user_id = $1;
