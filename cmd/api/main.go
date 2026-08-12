@@ -45,6 +45,9 @@ func main() {
 		middleware.AuthMiddleware(urlHandler.GetUrls),
 	)
 
+	mux.Handle("POST /api/v1/urls",
+		middleware.AuthMiddleware(urlHandler.PostUrl),
+	)
 	log.Println("server running on :3000")
 
 	err = http.ListenAndServe(":3000", handler)

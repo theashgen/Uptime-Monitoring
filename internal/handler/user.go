@@ -50,8 +50,10 @@ func (h *UserHandler) UserSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")	
 	err = json.NewEncoder(w).Encode(user)
 	if err != nil {
+		w.Header().Set("Content-Type", "text/plain")	
 		http.Error(w, "Internal Server error", http.StatusInternalServerError)
 	}
 }
@@ -78,9 +80,13 @@ func (h *UserHandler) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	auth.SetCookie(w, token)
-	
-	json.NewEncoder(w).Encode(map[string]string{
+	w.Header().Set("Content-Type", "application/json")	
+	err = json.NewEncoder(w).Encode(map[string]string{
 		"message": "login successful",
 	})
-
+	
+	if err != nil {
+		w.Header().Set("Content-Type", "text/plain")	
+		http.Error(w, "json parasing failed", http.StatusInternalServerError)
+	}
 }

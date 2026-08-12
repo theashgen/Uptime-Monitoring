@@ -8,7 +8,7 @@ package repo
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -49,7 +49,7 @@ WHERE email = $1
 `
 
 type GetUserByEmailRow struct {
-	ID           pgtype.UUID
+	ID           uuid.UUID
 	Username     string
 	Passwordhash string
 }
@@ -67,7 +67,7 @@ WHERE username = $1
 `
 
 type GetUserByUsernameRow struct {
-	ID       pgtype.UUID
+	ID       uuid.UUID
 	Email    string
 	Username string
 }

@@ -5,17 +5,18 @@
 package repo
 
 import (
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 type Url struct {
-	Host     pgtype.Text
-	Interval pgtype.Text
-	UserID   pgtype.UUID
+	ID       uuid.UUID
+	Host     string
+	Interval string
+	UserID   uuid.UUID
 }
 
 type User struct {
-	ID           pgtype.UUID
+	ID           uuid.UUID
 	Email        string
 	Username     string
 	Passwordhash string

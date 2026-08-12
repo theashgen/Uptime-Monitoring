@@ -8,29 +8,56 @@ package repo
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const createURL = `-- name: CreateURL :one
 INSERT INTO urls (
     host,
-    interval
+    interval,
+    user_id
 )
 VALUES (
     $1,
-    $2
-) RETURNING host, interval, user_id
+    $2,
+    $3
+) RETURNING id, host, interval
 `
 
 type CreateURLParams struct {
-	Host     pgtype.Text
-	Interval pgtype.Text
+	Host     string
+	Interval string
+	UserID   uuid.UUID
 }
 
-func (q *Queries) CreateURL(ctx context.Context, arg CreateURLParams) (Url, error) {
-	row := q.db.QueryRow(ctx, createURL, arg.Host, arg.Interval)
-	var i Url
-	err := row.Scan(&i.Host, &i.Interval, &i.UserID)
+type CreateURLRow struct {
+	ID       uuid.UUID
+	Host     string
+	Interval string
+}
+
+func (q *Queries) CreateURL(ctx context.Context, arg CreateURLParams) (CreateURLRow, error) {
+	row := q.db.QueryRow(ctx, createURL, arg.Host, arg.Interval, arg.UserID)
+	var i CreateURLRow
+	err := row.Scan(&i.ID, &i.Host, &i.Interval)
+	return i, err
+}
+
+const getUrl = `-- name: GetUrl :one
+SELECT id, host, interval FROM urls
+WHERE host == $1
+`
+
+type GetUrlRow struct {
+	ID       uuid.UUID
+	Host     string
+	Interval string
+}
+
+func (q *Queries) GetUrl(ctx context.Context, host string) (GetUrlRow, error) {
+	row := q.db.QueryRow(ctx, getUrl, host)
+	var i GetUrlRow
+	err := row.Scan(&i.ID, &i.Host, &i.Interval)
 	return i, err
 }
 
@@ -40,11 +67,11 @@ WHERE user_id = $1
 `
 
 type ListURLsByUserRow struct {
-	Host     pgtype.Text
-	Interval pgtype.Text
+	Host     string
+	Interval string
 }
 
-func (q *Queries) ListURLsByUser(ctx context.Context, userID pgtype.UUID) ([]ListURLsByUserRow, error) {
+func (q *Queries) ListURLsByUser(ctx context.Context, userID uuid.UUID) ([]ListURLsByUserRow, error) {
 	rows, err := q.db.Query(ctx, listURLsByUser, userID)
 	if err != nil {
 		return nil, err

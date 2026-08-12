@@ -17,6 +17,12 @@ func NewURLService(queries *repo.Queries) *URLService {
 	}
 }
 
+type InsertURLbyUsernameParams struct{
+	Username string
+	Host string
+	Interval string
+}
+
 func (s *URLService) ListURLsByUsername(ctx context.Context, username string) ([]repo.ListURLsByUserRow, error) {
 	user, err := s.queries.GetUserByUsername(ctx, username)
 	if err != nil {
@@ -29,4 +35,27 @@ func (s *URLService) ListURLsByUsername(ctx context.Context, username string) ([
 	}
 
 	return urls, nil
+}
+
+
+func (s *URLService) InsertURLbyUsername(ctx context.Context, params InsertURLbyUsernameParams) (repo.CreateURLRow, error) {
+	if params.Username == "" {
+		return repo.CreateURLRow{}, errors.New("provide username")
+	}
+
+	user, err := s.queries.GetUserByUsername(ctx, params.Username)
+	if err != nil {
+		return repo.CreateURLRow{}, err
+	}
+	url, err := s.queries.CreateURL(ctx, repo.CreateURLParams{
+		UserID: user.ID,
+		Host: params.Host,
+		Interval: params.Interval,
+	})
+	
+	if err != nil {
+		return repo.CreateURLRow{}, err
+	}
+
+	return url, nil
 }
