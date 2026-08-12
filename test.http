@@ -21,8 +21,7 @@ Content-Type: application/json
 GET http://localhost:3000/api/v1/urls
 
 
-### POST URL
-POST http://localhost:3000/api/v1/urls
+### POST URL POST http://localhost:3000/api/v1/urls
 Content-Type: application/json
 
 {

@@ -3,7 +3,8 @@ package service
 import (
 	"context"
 	"errors"
-
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/theashgen/url-short/internal/repo"
 )
 
@@ -52,8 +53,12 @@ func (s *URLService) InsertURLbyUsername(ctx context.Context, params InsertURLby
 		Host: params.Host,
 		Interval: params.Interval,
 	})
-	
 	if err != nil {
+		var pgErr *pgconn.PgError
+
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {		
+			return repo.CreateURLRow{}, errors.New("Host already as monitor")
+		}
 		return repo.CreateURLRow{}, err
 	}
 
