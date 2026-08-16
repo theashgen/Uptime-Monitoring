@@ -18,7 +18,6 @@ func SignUserJWT(username string, expireAt time.Time) (string, error) {
 	signingKey := os.Getenv("JWT_SECRET")
 
 	if signingKey == "" {
-		fmt.Print("Set JWT_SECRET as Env variable")
 		return "", errors.New("Did Set the JWT_SECRET variable")
 	}
 
@@ -34,7 +33,6 @@ func SignUserJWT(username string, expireAt time.Time) (string, error) {
 	ss, err := token.SignedString([]byte(signingKey))
 
 	if err != nil {
-		fmt.Println(err.Error())
 		return "", errors.New("error while siging the token")
 	}
 
