@@ -47,8 +47,6 @@ func (h *URLHandler) GetUrls(w http.ResponseWriter, r *http.Request) {
 
 func (h *URLHandler) PostUrl(w http.ResponseWriter, r *http.Request) {
 	username, ok := r.Context().Value(middleware.UsernameKey).(string)
-	fmt.Println("username:", username)
-	fmt.Println("ok:", ok)
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
