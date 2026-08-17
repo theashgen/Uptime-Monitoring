@@ -19,6 +19,16 @@ type Url struct {
 	CreatedAt       pgtype.Timestamptz
 }
 
+type UrlCheck struct {
+	ID             uuid.UUID
+	UrlID          uuid.UUID
+	IsUp           bool
+	StatusCode     int
+	ResponseTimeMs int64
+	Error          pgtype.Text
+	CheckedAt      pgtype.Timestamptz
+}
+
 type User struct {
 	ID           uuid.UUID
 	Email        string
