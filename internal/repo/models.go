@@ -6,13 +6,17 @@ package repo
 
 import (
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Url struct {
-	ID       uuid.UUID
-	Host     string
-	Interval string
-	UserID   uuid.UUID
+	ID              uuid.UUID
+	Url             string
+	IntervalSeconds int32
+	NextCheckAt     pgtype.Timestamptz
+	IsActive        bool
+	UserID          uuid.UUID
+	CreatedAt       pgtype.Timestamptz
 }
 
 type User struct {

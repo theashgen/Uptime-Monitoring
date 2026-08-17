@@ -46,7 +46,7 @@ func (h *UserHandler) UserSignUp(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userHandler.CreateUser(r.Context(), userBody.Email, userBody.Username, userBody.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusConflict)
 		return
 	}
 
