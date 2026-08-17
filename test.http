@@ -26,6 +26,6 @@ POST http://localhost:3000/api/v1/urls
 Content-Type: application/json
 
 {
-    "host": "ashwinsathiya.me",
-    "interval": "2min"
+    "url": "ashwinsathiya.me",
+    "interval": -120
 }

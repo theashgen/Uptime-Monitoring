@@ -13,62 +13,44 @@ import (
 
 const createURL = `-- name: CreateURL :one
 INSERT INTO urls (
-    host,
-    interval,
+    url,
+    interval_seconds,
     user_id
 )
 VALUES (
     $1,
     $2,
     $3
-) RETURNING id, host, interval
+) RETURNING id, url, interval_seconds
 `
 
 type CreateURLParams struct {
-	Host     string
-	Interval string
-	UserID   uuid.UUID
+	Url             string
+	IntervalSeconds int32
+	UserID          uuid.UUID
 }
 
 type CreateURLRow struct {
-	ID       uuid.UUID
-	Host     string
-	Interval string
+	ID              uuid.UUID
+	Url             string
+	IntervalSeconds int32
 }
 
 func (q *Queries) CreateURL(ctx context.Context, arg CreateURLParams) (CreateURLRow, error) {
-	row := q.db.QueryRow(ctx, createURL, arg.Host, arg.Interval, arg.UserID)
+	row := q.db.QueryRow(ctx, createURL, arg.Url, arg.IntervalSeconds, arg.UserID)
 	var i CreateURLRow
-	err := row.Scan(&i.ID, &i.Host, &i.Interval)
-	return i, err
-}
-
-const getUrl = `-- name: GetUrl :one
-SELECT id, host, interval FROM urls
-WHERE host == $1
-`
-
-type GetUrlRow struct {
-	ID       uuid.UUID
-	Host     string
-	Interval string
-}
-
-func (q *Queries) GetUrl(ctx context.Context, host string) (GetUrlRow, error) {
-	row := q.db.QueryRow(ctx, getUrl, host)
-	var i GetUrlRow
-	err := row.Scan(&i.ID, &i.Host, &i.Interval)
+	err := row.Scan(&i.ID, &i.Url, &i.IntervalSeconds)
 	return i, err
 }
 
 const listURLsByUser = `-- name: ListURLsByUser :many
-SELECT host, interval FROM urls
+SELECT url, interval_seconds FROM urls
 WHERE user_id = $1
 `
 
 type ListURLsByUserRow struct {
-	Host     string
-	Interval string
+	Url             string
+	IntervalSeconds int32
 }
 
 func (q *Queries) ListURLsByUser(ctx context.Context, userID uuid.UUID) ([]ListURLsByUserRow, error) {
@@ -80,7 +62,7 @@ func (q *Queries) ListURLsByUser(ctx context.Context, userID uuid.UUID) ([]ListU
 	var items []ListURLsByUserRow
 	for rows.Next() {
 		var i ListURLsByUserRow
-		if err := rows.Scan(&i.Host, &i.Interval); err != nil {
+		if err := rows.Scan(&i.Url, &i.IntervalSeconds); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

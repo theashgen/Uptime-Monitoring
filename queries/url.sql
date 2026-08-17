@@ -1,16 +1,16 @@
 -- name: CreateURL :one
 INSERT INTO urls (
-    host,
-    interval,
+    url,
+    interval_seconds,
     user_id
 )
 VALUES (
     $1,
     $2,
     $3
-) RETURNING id, host, interval;
+) RETURNING id, url, interval_seconds;
 
 -- name: ListURLsByUser :many
-SELECT host, interval FROM urls
+SELECT url, interval_seconds FROM urls
 WHERE user_id = $1;
 

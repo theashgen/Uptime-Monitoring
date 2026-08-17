@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/theashgen/url-short/internal/middleware"
@@ -20,8 +19,8 @@ func NewURLHandler(urlService *service.URLService) *URLHandler {
 }
 
 type PostUrlBody struct {
-	Host string `json:"host"`
-	Interval string `json:"interval"`
+	Url string `json:"url"`
+	Interval int32 `json:"interval"`
 }
 
 func (h *URLHandler) GetUrls(w http.ResponseWriter, r *http.Request) {
@@ -59,9 +58,13 @@ func (h *URLHandler) PostUrl(w http.ResponseWriter, r *http.Request) {
 		return 
 	}
 
+	if reqBody.Interval <= 0 {
+		http.Error(w, "interval should be greater than zero.", http.StatusBadRequest)
+		return
+	}
 	url, err := h.urlService.InsertURLbyUsername(r.Context(), service.InsertURLbyUsernameParams{
 		Username: username,
-		Host: reqBody.Host,
+		Url: reqBody.Url,
 		Interval: reqBody.Interval,
 	})
 	if err != nil {

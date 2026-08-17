@@ -2,17 +2,11 @@
 SELECT 'up SQL query';
 CREATE TABLE urls (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
     url TEXT NOT NULL,
-
     interval_seconds INT NOT NULL,
-
     next_check_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
     is_active BOOLEAN NOT NULL DEFAULT true,
-
     user_id UUID NOT NULL,
-
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     CONSTRAINT fk_user

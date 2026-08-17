@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/theashgen/url-short/internal/auth"
