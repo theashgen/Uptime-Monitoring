@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createURL = `-- name: CreateURL :one
@@ -41,6 +42,97 @@ func (q *Queries) CreateURL(ctx context.Context, arg CreateURLParams) (CreateURL
 	var i CreateURLRow
 	err := row.Scan(&i.ID, &i.Url, &i.IntervalSeconds)
 	return i, err
+}
+
+const createURLCheck = `-- name: CreateURLCheck :one
+INSERT INTO url_checks (
+    url_id,
+    is_up,
+    status_code,
+    response_time_ms,
+    error
+)
+VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    $5
+)
+RETURNING id, url_id, is_up, status_code, response_time_ms, error, checked_at
+`
+
+type CreateURLCheckParams struct {
+	UrlID          uuid.UUID
+	IsUp           bool
+	StatusCode     int
+	ResponseTimeMs int64
+	Error          pgtype.Text
+}
+
+func (q *Queries) CreateURLCheck(ctx context.Context, arg CreateURLCheckParams) (UrlCheck, error) {
+	row := q.db.QueryRow(ctx, createURLCheck,
+		arg.UrlID,
+		arg.IsUp,
+		arg.StatusCode,
+		arg.ResponseTimeMs,
+		arg.Error,
+	)
+	var i UrlCheck
+	err := row.Scan(
+		&i.ID,
+		&i.UrlID,
+		&i.IsUp,
+		&i.StatusCode,
+		&i.ResponseTimeMs,
+		&i.Error,
+		&i.CheckedAt,
+	)
+	return i, err
+}
+
+const getDueURLs = `-- name: GetDueURLs :many
+SELECT
+    id,
+    url,
+    interval_seconds,
+    next_check_at,
+    is_active,
+    user_id,
+    created_at
+FROM urls
+WHERE is_active = true
+  AND next_check_at <= NOW()
+ORDER BY next_check_at
+LIMIT $1
+`
+
+func (q *Queries) GetDueURLs(ctx context.Context, limit int32) ([]Url, error) {
+	rows, err := q.db.Query(ctx, getDueURLs, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Url
+	for rows.Next() {
+		var i Url
+		if err := rows.Scan(
+			&i.ID,
+			&i.Url,
+			&i.IntervalSeconds,
+			&i.NextCheckAt,
+			&i.IsActive,
+			&i.UserID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listURLsByUser = `-- name: ListURLsByUser :many

@@ -11,9 +11,11 @@ import (
 	"github.com/theashgen/url-short/internal/middleware"
 	"github.com/theashgen/url-short/internal/repo"
 	"github.com/theashgen/url-short/internal/service"
+	"github.com/theashgen/url-short/internal/service/checker"
 )
 
 func main() {
+	ctx := context.Background()
 
 	err := godotenv.Load(".env.local")
 	if err != nil {
@@ -29,11 +31,14 @@ func main() {
 
 	queries := repo.New(db)
 
+	checker.NewCheckerService(queries)
+
 	userService := service.NewUserService(queries)
 	userHandler := handler.NewUserHandler(userService)
 
 	urlService := service.NewURLService(queries)
 	urlHandler := handler.NewURLHandler(urlService)
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("POST /api/v1/signup", userHandler.UserSignUp)
