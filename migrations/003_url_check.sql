@@ -17,6 +17,4 @@ CREATE TABLE url_checks (
 );
 
 -- +goose Down
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS urls;
 DROP TABLE IF EXISTS url_checks;

@@ -2,8 +2,10 @@ package checker
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
+	"strings"
 
 	"github.com/theashgen/url-short/internal/repo"
 )
@@ -27,6 +29,9 @@ type Result struct {
 
 func Check(ctx context.Context, url string) Result {
 
+	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+		url = "http://" + url
+	}
 	start := time.Now()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -60,21 +65,39 @@ func (s *CheckerService) Scheduler(ctx context.Context) {
 
 		urls, err := s.queries.GetDueURLs(ctx, 10)
 		if err != nil {
-		
-			return
+			fmt.Println("Error while getting due urls.")
+			time.Sleep(time.Second * 5)
+			continue	
 		}
 		
 		for _, url := range urls {
 			res := Check(ctx, url.Url)	
 			
-			s.queries.CreateURLCheck(ctx, repo.CreateURLCheckParams{
+			var errString *string
+			if res.Error != nil {
+				errstr := res.Error.Error()
+				errString = &errstr
+			}
+
+			_, err = s.queries.CreateURLCheck(ctx, repo.CreateURLCheckParams{
 				UrlID: url.ID,
 				IsUp: res.IsUp,
+				Error: errString,
 				StatusCode: res.StatusCode,
+				ResponseTimeMs: res.ResponseTimeMs,
 			})
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			err = s.queries.UpdateURLNextCheck(ctx, url.ID)
+			if err != nil {
+				fmt.Print(err.Error())
+			}
 		}
 
 		// Wait for the 5s
+		fmt.Println("waiting for next check")
 		time.Sleep(time.Second * 5)
 	
 	}	

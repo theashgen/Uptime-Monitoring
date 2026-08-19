@@ -45,3 +45,8 @@ VALUES (
     $5
 )
 RETURNING *;
+
+-- name: UpdateURLNextCheck :exec
+UPDATE urls
+SET next_check_at = NOW() + (interval_seconds * INTERVAL '1 second')
+WHERE id = $1;

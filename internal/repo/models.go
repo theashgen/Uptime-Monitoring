@@ -25,7 +25,7 @@ type UrlCheck struct {
 	IsUp           bool
 	StatusCode     int
 	ResponseTimeMs int64
-	Error          pgtype.Text
+	Error          *string
 	CheckedAt      pgtype.Timestamptz
 }
 

@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createURL = `-- name: CreateURL :one
@@ -67,7 +66,7 @@ type CreateURLCheckParams struct {
 	IsUp           bool
 	StatusCode     int
 	ResponseTimeMs int64
-	Error          pgtype.Text
+	Error          *string
 }
 
 func (q *Queries) CreateURLCheck(ctx context.Context, arg CreateURLCheckParams) (UrlCheck, error) {
@@ -163,4 +162,15 @@ func (q *Queries) ListURLsByUser(ctx context.Context, userID uuid.UUID) ([]ListU
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateURLNextCheck = `-- name: UpdateURLNextCheck :exec
+UPDATE urls
+SET next_check_at = NOW() + (interval_seconds * INTERVAL '1 second')
+WHERE id = $1
+`
+
+func (q *Queries) UpdateURLNextCheck(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, updateURLNextCheck, id)
+	return err
 }

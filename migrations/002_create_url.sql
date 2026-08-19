@@ -22,5 +22,4 @@ CREATE TABLE urls (
 );
 -- +goose Down
 DROP TABLE IF EXISTS urls;
-DROP TABLE IF EXISTS users;
 SELECT 'down SQL query';

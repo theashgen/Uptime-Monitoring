@@ -31,7 +31,8 @@ func main() {
 
 	queries := repo.New(db)
 
-	checker.NewCheckerService(queries)
+	s := checker.NewCheckerService(queries)
+	go s.Scheduler(ctx)
 
 	userService := service.NewUserService(queries)
 	userHandler := handler.NewUserHandler(userService)
