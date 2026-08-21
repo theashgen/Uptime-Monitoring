@@ -32,7 +32,7 @@ func main() {
 	queries := repo.New(db)
 
 	s := checker.NewCheckerService(queries)
-	go s.Scheduler(ctx)
+	go s.Scheduler(ctx) // <- if !routine block thread
 
 	userService := service.NewUserService(queries)
 	userHandler := handler.NewUserHandler(userService)
