@@ -2,11 +2,11 @@ package checker
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"time"
 	"strings"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/theashgen/url-short/internal/repo"
 )
 
@@ -14,11 +14,11 @@ type CheckerService struct {
 	queries *repo.Queries
 }
 
-func NewCheckerService(queries *repo.Queries) *CheckerService {
-	return &CheckerService{
-		queries: queries,
-	}
+type Job struct {
+	Id uuid.UUID
+	Url string
 }
+
 
 type Result struct {
 	IsUp bool
@@ -27,11 +27,17 @@ type Result struct {
 	ResponseTimeMs int64
 }
 
-func Check(ctx context.Context, url string) Result {
+func NewCheckerService(queries *repo.Queries) *CheckerService {
+	return &CheckerService{
+		queries: queries,
+	}
+}
 
-	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+func Check(ctx context.Context, url string) Result {
+	if  !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
 		url = "http://" + url
 	}
+
 	start := time.Now()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -42,63 +48,75 @@ func Check(ctx context.Context, url string) Result {
 	}
 
 	resp, err := http.DefaultClient.Do(req)
-	responseTime := time.Since(start).Milliseconds()
+	duration := time.Since(start).Milliseconds()
+
 	if err != nil {
 		return Result{
 			IsUp: false,
 			Error: err,
-			ResponseTimeMs: responseTime,
+			ResponseTimeMs: duration,
 		}
 	}
 	defer resp.Body.Close()
-	
 	return Result{
-		IsUp: resp.StatusCode >= 200 && resp.StatusCode < 400,
-		Error: nil,
+		IsUp: true,
 		StatusCode: resp.StatusCode,
-		ResponseTimeMs: responseTime,
+		ResponseTimeMs: duration,
 	}
 }
 
-func (s *CheckerService) Scheduler(ctx context.Context) {
-	for {
+func (s *CheckerService) Worker(ctx context.Context, jobs <- chan Job)  {
+	for url := range jobs {
+		res := Check(ctx, url.Url)
+		
+		var errString *string
+		if res.Error != nil {
+			errStr := res.Error.Error()
+			errString = &errStr
+		}
+		s.queries.CreateURLCheck(ctx, repo.CreateURLCheckParams{
+			UrlID:          url.Id,
+			IsUp:           res.IsUp,
+			Error:          errString,
+			StatusCode:     res.StatusCode,
+			ResponseTimeMs: res.ResponseTimeMs,
+		})
+		// fmt.Println("updated db")
+		s.queries.UpdateURLNextCheck(ctx, url.Id)
+	}
+}
 
-		urls, err := s.queries.GetDueURLs(ctx, 10)
+
+
+func (s *CheckerService) Scheduler(ctx context.Context) {
+	
+	n_worker := 5
+	jobs := make(chan Job)
+
+	for i := 0; i < n_worker; i ++ {
+		go s.Worker(ctx, jobs)
+	}
+
+	for {
+		// fmt.Println("urls")
+		urls, err := s.queries.GetDueURLs(ctx, 100)
+		// fmt.Print(urls)
 		if err != nil {
-			fmt.Println("Error while getting due urls.")
+			// fmt.Println("Error while getting due urls.")
 			time.Sleep(time.Second * 5)
 			continue	
 		}
 		
 		for _, url := range urls {
-			res := Check(ctx, url.Url)	
-			
-			var errString *string
-			if res.Error != nil {
-				errstr := res.Error.Error()
-				errString = &errstr
-			}
-
-			_, err = s.queries.CreateURLCheck(ctx, repo.CreateURLCheckParams{
-				UrlID: url.ID,
-				IsUp: res.IsUp,
-				Error: errString,
-				StatusCode: res.StatusCode,
-				ResponseTimeMs: res.ResponseTimeMs,
-			})
-			if err != nil {
-				fmt.Println(err)
-			}
-
-			err = s.queries.UpdateURLNextCheck(ctx, url.ID)
-			if err != nil {
-				fmt.Print(err.Error())
+			jobs <- Job {
+				Id: url.ID,
+				Url: url.Url,
 			}
 		}
 
 		// Wait for the 5s
-		fmt.Println("waiting for next check")
-		time.Sleep(time.Second * 5)
+		// fmt.Println("waiting for next check")
+		time.Sleep(time.Minute)
 	
 	}	
 }
