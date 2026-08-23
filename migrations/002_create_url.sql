@@ -20,7 +20,11 @@ CREATE TABLE urls (
     CONSTRAINT positive_interval
         CHECK (interval_seconds > 0)
 );
+
+CREATE INDEX idx_urls_due
+ON urls (next_check_at, id)
+WHERE is_active = true;
+
 -- +goose Down
 DROP TABLE IF EXISTS urls;
-DROP TABLE IF EXISTS users;
 SELECT 'down SQL query';
