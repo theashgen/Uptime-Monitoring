@@ -11,6 +11,58 @@ import (
 	"github.com/google/uuid"
 )
 
+const claimDueURLs = `-- name: ClaimDueURLs :many
+WITH due AS (
+    SELECT id
+    FROM urls
+    WHERE is_active = true
+      AND next_check_at <= NOW()
+    ORDER BY next_check_at
+    FOR UPDATE SKIP LOCKED
+    LIMIT $1
+)
+UPDATE urls u
+SET next_check_at = NOW() + (u.interval_seconds * INTERVAL '1 second')
+FROM due
+WHERE u.id = due.id
+RETURNING
+    u.id,
+    u.url,
+    u.interval_seconds,
+    u.next_check_at,
+    u.is_active,
+    u.user_id,
+    u.created_at
+`
+
+func (q *Queries) ClaimDueURLs(ctx context.Context, limit int32) ([]Url, error) {
+	rows, err := q.db.Query(ctx, claimDueURLs, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Url
+	for rows.Next() {
+		var i Url
+		if err := rows.Scan(
+			&i.ID,
+			&i.Url,
+			&i.IntervalSeconds,
+			&i.NextCheckAt,
+			&i.IsActive,
+			&i.UserID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createURL = `-- name: CreateURL :one
 INSERT INTO urls (
     url,
@@ -43,6 +95,53 @@ func (q *Queries) CreateURL(ctx context.Context, arg CreateURLParams) (CreateURL
 	return i, err
 }
 
+const createURLCheck = `-- name: CreateURLCheck :one
+INSERT INTO url_checks (
+    url_id,
+    is_up,
+    status_code,
+    response_time_ms,
+    error
+)
+VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    $5
+)
+RETURNING id, url_id, is_up, status_code, response_time_ms, error, checked_at
+`
+
+type CreateURLCheckParams struct {
+	UrlID          uuid.UUID
+	IsUp           bool
+	StatusCode     int
+	ResponseTimeMs int64
+	Error          *string
+}
+
+func (q *Queries) CreateURLCheck(ctx context.Context, arg CreateURLCheckParams) (UrlCheck, error) {
+	row := q.db.QueryRow(ctx, createURLCheck,
+		arg.UrlID,
+		arg.IsUp,
+		arg.StatusCode,
+		arg.ResponseTimeMs,
+		arg.Error,
+	)
+	var i UrlCheck
+	err := row.Scan(
+		&i.ID,
+		&i.UrlID,
+		&i.IsUp,
+		&i.StatusCode,
+		&i.ResponseTimeMs,
+		&i.Error,
+		&i.CheckedAt,
+	)
+	return i, err
+}
+
 const listURLsByUser = `-- name: ListURLsByUser :many
 SELECT url, interval_seconds FROM urls
 WHERE user_id = $1
@@ -71,4 +170,15 @@ func (q *Queries) ListURLsByUser(ctx context.Context, userID uuid.UUID) ([]ListU
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateURLNextCheck = `-- name: UpdateURLNextCheck :exec
+UPDATE urls
+SET next_check_at = NOW() + (interval_seconds * INTERVAL '1 second')
+WHERE id = $1
+`
+
+func (q *Queries) UpdateURLNextCheck(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, updateURLNextCheck, id)
+	return err
 }
