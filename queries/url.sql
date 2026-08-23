@@ -14,20 +14,28 @@ VALUES (
 SELECT url, interval_seconds FROM urls
 WHERE user_id = $1;
 
--- name: GetDueURLs :many
-SELECT
-    id,
-    url,
-    interval_seconds,
-    next_check_at,
-    is_active,
-    user_id,
-    created_at
-FROM urls
-WHERE is_active = true
-  AND next_check_at <= NOW()
-ORDER BY next_check_at
-LIMIT $1;
+-- name: ClaimDueURLs :many
+WITH due AS (
+    SELECT id
+    FROM urls
+    WHERE is_active = true
+      AND next_check_at <= NOW()
+    ORDER BY next_check_at
+    FOR UPDATE SKIP LOCKED
+    LIMIT $1
+)
+UPDATE urls u
+SET next_check_at = NOW() + (u.interval_seconds * INTERVAL '1 second')
+FROM due
+WHERE u.id = due.id
+RETURNING
+    u.id,
+    u.url,
+    u.interval_seconds,
+    u.next_check_at,
+    u.is_active,
+    u.user_id,
+    u.created_at;
 
 -- name: CreateURLCheck :one
 INSERT INTO url_checks (

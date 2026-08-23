@@ -27,7 +27,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	defer db.Close(context.Background())
+	defer db.Close()
 
 	queries := repo.New(db)
 

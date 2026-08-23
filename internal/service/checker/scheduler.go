@@ -12,6 +12,7 @@ import (
 
 type CheckerService struct {
 	queries *repo.Queries
+	client *http.Client
 }
 
 type Job struct {
@@ -30,44 +31,57 @@ type Result struct {
 func NewCheckerService(queries *repo.Queries) *CheckerService {
 	return &CheckerService{
 		queries: queries,
+		client: &http.Client{
+            Timeout: 10 * time.Second,
+        },
 	}
 }
 
-func Check(ctx context.Context, url string) Result {
-	if  !(strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://")) {
-		url = "http://" + url
-	}
+func (s *CheckerService) Check(ctx context.Context, url string) Result {
+    if !(strings.HasPrefix(url, "http://") ||
+        strings.HasPrefix(url, "https://")) {
+        url = "http://" + url
+    }
 
-	start := time.Now()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return Result{
-			IsUp: false,
-			Error: err,
-		}
-	}
+    start := time.Now()
 
-	resp, err := http.DefaultClient.Do(req)
-	duration := time.Since(start).Milliseconds()
+    req, err := http.NewRequestWithContext(
+        ctx,
+        http.MethodGet,
+        url,
+        nil,
+    )
+    if err != nil {
+        return Result{
+            IsUp:  false,
+            Error: err,
+        }
+    }
 
-	if err != nil {
-		return Result{
-			IsUp: false,
-			Error: err,
-			ResponseTimeMs: duration,
-		}
-	}
-	defer resp.Body.Close()
-	return Result{
-		IsUp: true,
-		StatusCode: resp.StatusCode,
-		ResponseTimeMs: duration,
-	}
+    resp, err := s.client.Do(req)
+
+    duration := time.Since(start).Milliseconds()
+
+    if err != nil {
+        return Result{
+            IsUp:           false,
+            Error:          err,
+            ResponseTimeMs: duration,
+        }
+    }
+
+    defer resp.Body.Close()
+
+    return Result{
+        IsUp:           resp.StatusCode >= 200 && resp.StatusCode < 400,
+        StatusCode:     resp.StatusCode,
+        ResponseTimeMs: duration,
+    }
 }
 
 func (s *CheckerService) Worker(ctx context.Context, jobs <- chan Job)  {
 	for url := range jobs {
-		res := Check(ctx, url.Url)
+		res := s.Check(ctx, url.Url)
 		
 		var errString *string
 		if res.Error != nil {
@@ -90,8 +104,9 @@ func (s *CheckerService) Worker(ctx context.Context, jobs <- chan Job)  {
 
 func (s *CheckerService) Scheduler(ctx context.Context) {
 	
-	n_worker := 5
-	jobs := make(chan Job)
+	n_worker := 1000
+	jobs := make(chan Job, 1000)
+	defer close(jobs)
 
 	for i := 0; i < n_worker; i ++ {
 		go s.Worker(ctx, jobs)
@@ -99,7 +114,7 @@ func (s *CheckerService) Scheduler(ctx context.Context) {
 
 	for {
 		// fmt.Println("urls")
-		urls, err := s.queries.GetDueURLs(ctx, 100)
+		urls, err := s.queries.ClaimDueURLs(ctx, 1000)
 		// fmt.Print(urls)
 		if err != nil {
 			// fmt.Println("Error while getting due urls.")
@@ -108,17 +123,21 @@ func (s *CheckerService) Scheduler(ctx context.Context) {
 		}
 		
 		for _, url := range urls {
-			jobs <- Job {
-				Id: url.ID,
-				Url: url.Url,
+			select {
+				case <-ctx.Done():
+					return
+				case jobs <- Job {
+
+					Id: url.ID,
+					Url: url.Url,
+				}:
 			}
 		}
 
 		// Wait for the 5s
 		// fmt.Println("waiting for next check")
-		time.Sleep(time.Minute)
+		time.Sleep(time.Second * 10)
 	
 	}	
 }
-
 
