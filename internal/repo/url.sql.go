@@ -11,6 +11,58 @@ import (
 	"github.com/google/uuid"
 )
 
+const claimDueURLs = `-- name: ClaimDueURLs :many
+WITH due AS (
+    SELECT id
+    FROM urls
+    WHERE is_active = true
+      AND next_check_at <= NOW()
+    ORDER BY next_check_at
+    FOR UPDATE SKIP LOCKED
+    LIMIT $1
+)
+UPDATE urls u
+SET next_check_at = NOW() + (u.interval_seconds * INTERVAL '1 second')
+FROM due
+WHERE u.id = due.id
+RETURNING
+    u.id,
+    u.url,
+    u.interval_seconds,
+    u.next_check_at,
+    u.is_active,
+    u.user_id,
+    u.created_at
+`
+
+func (q *Queries) ClaimDueURLs(ctx context.Context, limit int32) ([]Url, error) {
+	rows, err := q.db.Query(ctx, claimDueURLs, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Url
+	for rows.Next() {
+		var i Url
+		if err := rows.Scan(
+			&i.ID,
+			&i.Url,
+			&i.IntervalSeconds,
+			&i.NextCheckAt,
+			&i.IsActive,
+			&i.UserID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createURL = `-- name: CreateURL :one
 INSERT INTO urls (
     url,
@@ -88,50 +140,6 @@ func (q *Queries) CreateURLCheck(ctx context.Context, arg CreateURLCheckParams) 
 		&i.CheckedAt,
 	)
 	return i, err
-}
-
-const getDueURLs = `-- name: GetDueURLs :many
-SELECT
-    id,
-    url,
-    interval_seconds,
-    next_check_at,
-    is_active,
-    user_id,
-    created_at
-FROM urls
-WHERE is_active = true
-  AND next_check_at <= NOW()
-ORDER BY next_check_at
-LIMIT $1
-`
-
-func (q *Queries) GetDueURLs(ctx context.Context, limit int32) ([]Url, error) {
-	rows, err := q.db.Query(ctx, getDueURLs, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Url
-	for rows.Next() {
-		var i Url
-		if err := rows.Scan(
-			&i.ID,
-			&i.Url,
-			&i.IntervalSeconds,
-			&i.NextCheckAt,
-			&i.IsActive,
-			&i.UserID,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listURLsByUser = `-- name: ListURLsByUser :many
