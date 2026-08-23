@@ -95,51 +95,12 @@ func (q *Queries) CreateURL(ctx context.Context, arg CreateURLParams) (CreateURL
 	return i, err
 }
 
-const createURLCheck = `-- name: CreateURLCheck :one
-INSERT INTO url_checks (
-    url_id,
-    is_up,
-    status_code,
-    response_time_ms,
-    error
-)
-VALUES (
-    $1,
-    $2,
-    $3,
-    $4,
-    $5
-)
-RETURNING id, url_id, is_up, status_code, response_time_ms, error, checked_at
-`
-
-type CreateURLCheckParams struct {
+type CreateURLChecksParams struct {
 	UrlID          uuid.UUID
 	IsUp           bool
 	StatusCode     int
 	ResponseTimeMs int64
 	Error          *string
-}
-
-func (q *Queries) CreateURLCheck(ctx context.Context, arg CreateURLCheckParams) (UrlCheck, error) {
-	row := q.db.QueryRow(ctx, createURLCheck,
-		arg.UrlID,
-		arg.IsUp,
-		arg.StatusCode,
-		arg.ResponseTimeMs,
-		arg.Error,
-	)
-	var i UrlCheck
-	err := row.Scan(
-		&i.ID,
-		&i.UrlID,
-		&i.IsUp,
-		&i.StatusCode,
-		&i.ResponseTimeMs,
-		&i.Error,
-		&i.CheckedAt,
-	)
-	return i, err
 }
 
 const listURLsByUser = `-- name: ListURLsByUser :many
