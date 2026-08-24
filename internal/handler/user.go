@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/theashgen/url-short/internal/auth"
+	_ "github.com/theashgen/url-short/internal/repo"
 	"github.com/theashgen/url-short/internal/service"
 )
 
@@ -35,6 +36,18 @@ type UserSignRespones struct {
 	Email    string `json:"email"`
 }
 
+// UserSignUp godoc
+// @Summary      User SignUp
+// @Description  Create a new user account
+// @Tags         user
+// @Accept       json
+// @Produce      json
+// @Param        request body handler.UserSignUpRequest true "Sign Up Request Body"
+// @Success      200  {object}  repo.CreateUserRow
+// @Failure      400  {string}  string "Invalid json request"
+// @Failure      409  {string}  string "User already exists"
+// @Failure      500  {string}  string "Internal Server error"
+// @Router       /signup [post]
 func (h *UserHandler) UserSignUp(w http.ResponseWriter, r *http.Request) {
 	var userBody UserSignUpRequest
 
@@ -58,8 +71,18 @@ func (h *UserHandler) UserSignUp(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
-
+// UserLoginHandler godoc
+// @Summary      User Login
+// @Description  Authenticate user and set cookie
+// @Tags         user
+// @Accept       json
+// @Produce      json
+// @Param        request body handler.UserLoginRequest true "Login Request Body"
+// @Success      200  {object}  map[string]string "{"message": "login successful"}"
+// @Failure      400  {string}  string "Invalid json format"
+// @Failure      401  {string}  string "invalid email or password"
+// @Failure      500  {string}  string "error while creating token / json parsing failed"
+// @Router       /login [post]
 func (h *UserHandler) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 	var UserLoginDetails UserLoginRequest
 
