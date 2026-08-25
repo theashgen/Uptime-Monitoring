@@ -18,7 +18,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		// fmt.Print(cookie.Value)	
+		// fmt.Print(cookie.Value)
 		if cookie.Value == "" {
 			http.Error(w, "Invalid Token", http.StatusUnauthorized)
 			return
@@ -28,7 +28,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			http.Error(w, "Invalid Token", http.StatusUnauthorized)
 			return
 		}
-		
+
 		ctx := context.WithValue(r.Context(), UsernameKey, claims.Username)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
