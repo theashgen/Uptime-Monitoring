@@ -50,12 +50,9 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "{\"message\": \"login successful\"}",
+                        "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.LoginResponse"
                         }
                     },
                     "400": {
@@ -234,6 +231,15 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "handler.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "login successful"
+                }
+            }
+        },
         "handler.PostUrlBody": {
             "type": "object",
             "properties": {
