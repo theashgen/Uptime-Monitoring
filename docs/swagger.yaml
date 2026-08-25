@@ -1,5 +1,11 @@
 basePath: /api/v1
 definitions:
+  handler.LoginResponse:
+    properties:
+      message:
+        example: login successful
+        type: string
+    type: object
   handler.PostUrlBody:
     properties:
       interval:
@@ -78,11 +84,9 @@ paths:
       - application/json
       responses:
         "200":
-          description: '{"message": "login successful"}'
+          description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/handler.LoginResponse'
         "400":
           description: Invalid json format
           schema:
