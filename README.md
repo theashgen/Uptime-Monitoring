@@ -5,6 +5,7 @@ A lightweight, robust URL uptime monitoring system built with **Go** and **Postg
 ## 🏗️ Architecture Overview
 
 The system is currently designed as a **synchronous, interval-based monitoring engine**. It runs a background scheduling loop that ensures every URL is checked according to its defined interval.
+![Architecture Overview](assets/arch.png)
 
 ### Core Components
 - **API Server:** Handles user registration, login, and URL management via `net/http` and `chi`/`mux`.
