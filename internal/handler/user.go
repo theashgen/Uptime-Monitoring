@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/theashgen/url-short/internal/auth"
+	_ "github.com/theashgen/url-short/internal/repo"
 	"github.com/theashgen/url-short/internal/service"
 )
 
@@ -35,6 +36,23 @@ type UserSignRespones struct {
 	Email    string `json:"email"`
 }
 
+type LoginResponse struct {
+	Message string `json:"message" example:"login successful"`
+}
+
+// UserSignUp godoc
+//
+//	@Summary		User SignUp
+//	@Description	Create a new user account
+//	@Tags			user
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		handler.UserSignUpRequest	true	"Sign Up Request Body"
+//	@Success		200		{object}	repo.CreateUserRow
+//	@Failure		400		{string}	string	"Invalid json request"
+//	@Failure		409		{string}	string	"User already exists"
+//	@Failure		500		{string}	string	"Internal Server error"
+//	@Router			/signup [post]
 func (h *UserHandler) UserSignUp(w http.ResponseWriter, r *http.Request) {
 	var userBody UserSignUpRequest
 
@@ -50,16 +68,27 @@ func (h *UserHandler) UserSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")	
+	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(user)
 	if err != nil {
-		w.Header().Set("Content-Type", "text/plain")	
+		w.Header().Set("Content-Type", "text/plain")
 		http.Error(w, "Internal Server error", http.StatusInternalServerError)
 	}
 }
 
-
-
+// UserLoginHandler godoc
+//
+//	@Summary		User Login
+//	@Description	Authenticate user and set cookie
+//	@Tags			user
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		handler.UserLoginRequest	true	"Login Request Body"
+//	@Success		200		{object}	handler.LoginResponse
+//	@Failure		400		{string}	string	"Invalid json format"
+//	@Failure		401		{string}	string	"invalid email or password"
+//	@Failure		500		{string}	string	"error while creating token / json parsing failed"
+//	@Router			/login [post]
 func (h *UserHandler) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 	var UserLoginDetails UserLoginRequest
 
@@ -80,13 +109,13 @@ func (h *UserHandler) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	auth.SetCookie(w, token)
-	w.Header().Set("Content-Type", "application/json")	
-	err = json.NewEncoder(w).Encode(map[string]string{
-		"message": "login successful",
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(LoginResponse{
+		Message: "login successful",
 	})
-	
+
 	if err != nil {
-		w.Header().Set("Content-Type", "text/plain")	
+		w.Header().Set("Content-Type", "text/plain")
 		http.Error(w, "json parasing failed", http.StatusInternalServerError)
 	}
 }
