@@ -2,6 +2,7 @@ package checker
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -20,10 +21,11 @@ type Job struct {
 	Url string
 }
 
-type Result struct {
+type CheckResult struct {
+	URLID          uuid.UUID
 	IsUp           bool
-	Error          error
-	StatusCode     int
+	Error          *string
+	StatusCode     int32
 	ResponseTimeMs int64
 }
 
@@ -78,40 +80,101 @@ func (s *CheckerService) Check(ctx context.Context, url string) Result {
 	}
 }
 
-func (s *CheckerService) Worker(ctx context.Context, jobs <-chan Job) {
-	for url := range jobs {
-		res := s.Check(ctx, url.Url)
+func (s *CheckerService) Worker(
+	ctx context.Context,
+	jobs <-chan Job,
+	results chan<- repo.CreateURLChecksParams,
+) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
 
-		var errString *string
-		if res.Error != nil {
-			errStr := res.Error.Error()
-			errString = &errStr
+		case job, ok := <-jobs:
+			if !ok {
+				return
+			}
+
+			res := s.Check(ctx, job.Url)
+
+			var errString *string
+			if res.Error != nil {
+				err := res.Error.Error()
+				errString = &err
+			}
+
+			results <- repo.CreateURLChecksParams{
+				UrlID:          job.Id,
+				IsUp:           res.IsUp,
+				Error:          errString,
+				StatusCode:     res.StatusCode,
+				ResponseTimeMs: res.ResponseTimeMs,
+			}
 		}
-		s.queries.CreateURLCheck(ctx, repo.CreateURLCheckParams{
-			UrlID:          url.Id,
-			IsUp:           res.IsUp,
-			Error:          errString,
-			StatusCode:     res.StatusCode,
-			ResponseTimeMs: res.ResponseTimeMs,
-		})
-		// fmt.Println("updated db")
-		s.queries.UpdateURLNextCheck(ctx, url.Id)
 	}
 }
 
-func (s *CheckerService) Scheduler(ctx context.Context) {
+func (s *CheckerService) ResultProcessor(
+	ctx context.Context,
+	results <-chan repo.CreateURLChecksParams,
+) {
+	batch := make([]repo.CreateURLChecksParams, 0, 100)
 
-	n_worker := 1000
-	jobs := make(chan Job, 1000)
-	defer close(jobs)
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
 
-	for i := 0; i < n_worker; i++ {
-		go s.Worker(ctx, jobs)
+	flush := func() {
+		if len(batch) == 0 {
+			return
+		}
+
+		_, err := s.queries.CreateURLChecks(ctx, batch)
+		if err != nil {
+				// handle error
+				log.Printf("bulk insert failed: %v", err)
+				return
+		}
+
+		batch = batch[:0]
 	}
 
 	for {
+		select {
+		case <-ctx.Done():
+			flush()
+			return
+
+		case result := <-results:
+			batch = append(batch, result)
+
+			if len(batch) >= 100 {
+				flush()
+			}
+
+		case <-ticker.C:
+			flush()
+		}
+	}
+}
+
+
+func (s *CheckerService) Scheduler(ctx context.Context) {
+	
+	n_worker := 100
+	jobs := make(chan Job, 100)
+	defer close(jobs)
+
+	results := make(chan repo.CreateURLChecksParams, 100)
+
+	for i := 0; i < n_worker; i ++ {
+		go s.Worker(ctx, jobs, results)
+	}
+
+	go s.ResultProcessor(ctx, results)
+
+	for {
 		// fmt.Println("urls")
-		urls, err := s.queries.ClaimDueURLs(ctx, 1000)
+		urls, err := s.queries.ClaimDueURLs(ctx, 100)
 		// fmt.Print(urls)
 		if err != nil {
 			// fmt.Println("Error while getting due urls.")
@@ -124,16 +187,10 @@ func (s *CheckerService) Scheduler(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case jobs <- Job{
-
-				Id:  url.ID,
-				Url: url.Url,
-			}:
+					Id:  url.ID,
+					Url: url.Url,
+				}:
 			}
 		}
-
-		// Wait for the 5s
-		// fmt.Println("waiting for next check")
-		time.Sleep(time.Second * 10)
-
-	}
+	}	
 }

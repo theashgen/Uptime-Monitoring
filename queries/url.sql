@@ -37,7 +37,7 @@ RETURNING
     u.user_id,
     u.created_at;
 
--- name: CreateURLCheck :one
+-- name: CreateURLChecks :copyfrom
 INSERT INTO url_checks (
     url_id,
     is_up,
@@ -51,10 +51,10 @@ VALUES (
     $3,
     $4,
     $5
-)
-RETURNING *;
+);
 
 -- name: UpdateURLNextCheck :exec
 UPDATE urls
 SET next_check_at = NOW() + (interval_seconds * INTERVAL '1 second')
 WHERE id = $1;
+
