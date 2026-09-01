@@ -19,7 +19,7 @@
 package main
 
 import (
-	// "context"
+	"context"
 	"log"
 	"net/http"
 
@@ -31,7 +31,7 @@ import (
 	"github.com/theashgen/url-short/internal/middleware"
 	"github.com/theashgen/url-short/internal/repo"
 	"github.com/theashgen/url-short/internal/service"
-	// "github.com/theashgen/url-short/internal/service/checker"
+	"github.com/theashgen/url-short/internal/service/checker"
 )
 
 func main() {
@@ -50,9 +50,9 @@ func main() {
 
 	queries := repo.New(db)
 
-	// ctx := context.Background()
-	// s := checker.NewCheckerService(queries)
-	// go s.Scheduler(ctx) // <- if !routine block thread
+	ctx := context.Background()
+	s := checker.NewCheckerService(queries)
+	go s.Scheduler(ctx) // <- if !routine block thread
 
 	userService := service.NewUserService(queries)
 	userHandler := handler.NewUserHandler(userService)

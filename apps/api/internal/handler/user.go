@@ -64,7 +64,7 @@ func (h *UserHandler) UserSignUp(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userHandler.CreateUser(r.Context(), userBody.Email, userBody.Username, userBody.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusConflict)
+		writeServiceError(w, err)
 		return
 	}
 
@@ -99,7 +99,7 @@ func (h *UserHandler) UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := h.userHandler.AuthenticateUser(r.Context(), UserLoginDetails.Email, UserLoginDetails.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		writeServiceError(w, err)
 		return
 	}
 	token, err := auth.SignUserJWT(user.Username, time.Now().Add(24*time.Hour))

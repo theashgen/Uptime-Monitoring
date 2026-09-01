@@ -29,6 +29,13 @@ type CheckResult struct {
 	ResponseTimeMs int64
 }
 
+type Result struct {
+	IsUp           bool
+	Error          error
+	StatusCode     int
+	ResponseTimeMs int64
+}
+
 func NewCheckerService(queries *repo.Queries) *CheckerService {
 	return &CheckerService{
 		queries: queries,
@@ -123,36 +130,41 @@ func (s *CheckerService) ResultProcessor(
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	flush := func() {
+	flush := func(flushCtx context.Context) {
 		if len(batch) == 0 {
 			return
 		}
 
-		_, err := s.queries.CreateURLChecks(ctx, batch)
+		_, err := s.queries.CreateURLChecks(flushCtx, batch)
 		if err != nil {
-				// handle error
-				log.Printf("bulk insert failed: %v", err)
-				return
+			log.Printf("bulk insert failed: %v", err)
 		}
 
+		// Drop the batch either way: check results are best-effort telemetry, not critical
+		// data, so we bound memory instead of retrying/growing the batch forever on a
+		// persistent DB outage.
 		batch = batch[:0]
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			flush()
+			// ctx is already cancelled here, so the final flush needs its own short-lived
+			// context instead of the cancelled one (which would fail immediately).
+			flushCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			flush(flushCtx)
+			cancel()
 			return
 
 		case result := <-results:
 			batch = append(batch, result)
 
 			if len(batch) >= 100 {
-				flush()
+				flush(ctx)
 			}
 
 		case <-ticker.C:
-			flush()
+			flush(ctx)
 		}
 	}
 }
@@ -179,6 +191,15 @@ func (s *CheckerService) Scheduler(ctx context.Context) {
 		if err != nil {
 			// fmt.Println("Error while getting due urls.")
 			time.Sleep(time.Second * 5)
+			continue
+		}
+
+		if len(urls) == 0 {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Second):
+			}
 			continue
 		}
 

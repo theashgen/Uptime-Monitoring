@@ -2,6 +2,25 @@
 
 A lightweight, robust URL uptime monitoring system built with **Go** and **PostgreSQL**. This service tracks user-submitted URLs, performs periodic health checks, and persists monitoring results for analysis.
 
+## 📦 Repo Structure
+
+This is a monorepo:
+
+```
+apps/api            Go + PostgreSQL backend (see apps/api/README below via CLAUDE.md)
+apps/web             Next.js frontend
+packages/api-client  Shared TS client for the Go API, used by apps/web (and, later, a React Native app)
+```
+
+The JS/TS side is managed with Bun + Turborepo:
+
+```bash
+bun install          # from repo root, installs all workspaces
+bunx turbo run dev   # run dev servers
+```
+
+The Go API is its own module rooted at `apps/api` — run Go commands from inside that directory.
+
 ## 🏗️ Architecture Overview
 
 The system is currently designed as a **synchronous, interval-based monitoring engine**. It runs a background scheduling loop that ensures every URL is checked according to its defined interval.
