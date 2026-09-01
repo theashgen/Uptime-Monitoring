@@ -1,5 +1,12 @@
 .env
-tmp
-dataset.csv
 .env.local
 .env.*
+tmp
+dataset.csv
+.DS_Store
+
+# JS/TS
+node_modules
+.turbo
+.next
+apps/web/next-env.d.ts

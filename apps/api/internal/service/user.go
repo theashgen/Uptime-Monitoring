@@ -2,9 +2,12 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"errors"
+	"fmt"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/theashgen/url-short/internal/repo"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -21,12 +24,15 @@ func NewUserService(queries *repo.Queries) *UserService {
 
 func (s *UserService) GetUserByUsername(ctx context.Context, username string) (repo.GetUserByUsernameRow, error) {
 	if username == "" {
-		return repo.GetUserByUsernameRow{}, errors.New("provide valid username.")
+		return repo.GetUserByUsernameRow{}, fmt.Errorf("%w: provide a valid username", ErrInvalidInput)
 	}
 
 	user, err := s.queries.GetUserByUsername(ctx, username)
 	if err != nil {
-		return repo.GetUserByUsernameRow{}, errors.New("username doesnt exist in the database")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return repo.GetUserByUsernameRow{}, fmt.Errorf("%w: user", ErrNotFound)
+		}
+		return repo.GetUserByUsernameRow{}, fmt.Errorf("%w: %v", ErrInternal, err)
 	}
 
 	return user, nil
@@ -35,11 +41,11 @@ func (s *UserService) GetUserByUsername(ctx context.Context, username string) (r
 func (s *UserService) CreateUser(ctx context.Context, email, username, password string) (repo.CreateUserRow, error) {
 
 	if username == "" || password == "" || email == "" {
-		return repo.CreateUserRow{}, errors.New("provide valid username, password and gmail")
+		return repo.CreateUserRow{}, fmt.Errorf("%w: provide a valid username, password and email", ErrInvalidInput)
 	}
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	if err != nil {
-		return repo.CreateUserRow{}, errors.New("Interal hashing failed")
+		return repo.CreateUserRow{}, fmt.Errorf("%w: hashing password: %v", ErrInternal, err)
 	}
 
 	user, err := s.queries.CreateUser(ctx, repo.CreateUserParams{
@@ -47,8 +53,13 @@ func (s *UserService) CreateUser(ctx context.Context, email, username, password 
 		Email:        email,
 		Passwordhash: string(passwordHash),
 	})
+
 	if err != nil {
-		return repo.CreateUserRow{}, errors.New("User already exisits")
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+			return repo.CreateUserRow{}, fmt.Errorf("%w: user already exists", ErrConflict)
+		}
+		return repo.CreateUserRow{}, fmt.Errorf("%w: %v", ErrInternal, err)
 	}
 
 	return user, nil
@@ -58,27 +69,21 @@ func (s *UserService) AuthenticateUser(
 	ctx context.Context,
 	email, password string,
 ) (repo.GetUserByEmailRow, error) {
-	// start := time.Now()
 	user, err := s.queries.GetUserByEmail(ctx, email)
 
-	// fmt.Println("DB:", time.Since(start))
-
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return repo.GetUserByEmailRow{}, errors.New("invalid email or password")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return repo.GetUserByEmailRow{}, ErrUnauthenticated
 		}
-		return repo.GetUserByEmailRow{}, err
+		return repo.GetUserByEmailRow{}, fmt.Errorf("%w: %v", ErrInternal, err)
 	}
-
-	// start = time.Now()
 
 	if err := bcrypt.CompareHashAndPassword(
 		[]byte(user.Passwordhash),
 		[]byte(password),
 	); err != nil {
-		return repo.GetUserByEmailRow{}, errors.New("invalid email or password")
+		return repo.GetUserByEmailRow{}, ErrUnauthenticated
 	}
-	// fmt.Println("bcrypt:", time.Since(start))
 
 	return user, nil
 }

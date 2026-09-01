@@ -2,12 +2,30 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/theashgen/url-short/internal/middleware"
-	_ "github.com/theashgen/url-short/internal/repo"
+	"github.com/theashgen/url-short/internal/repo"
 	"github.com/theashgen/url-short/internal/service"
 )
+
+// writeServiceError maps a service-layer sentinel error to the appropriate HTTP status.
+// Internal errors are logged with their real detail but never exposed to the client.
+func writeServiceError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, service.ErrInvalidInput):
+		http.Error(w, "invalid input", http.StatusBadRequest)
+	case errors.Is(err, service.ErrNotFound):
+		http.Error(w, "not found", http.StatusNotFound)
+	case errors.Is(err, service.ErrConflict):
+		http.Error(w, "already exists", http.StatusConflict)
+	case errors.Is(err, service.ErrUnauthenticated):
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	default:
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+	}
+}
 
 type URLHandler struct {
 	urlService *service.URLService
@@ -45,8 +63,11 @@ func (h *URLHandler) GetUrls(w http.ResponseWriter, r *http.Request) {
 
 	urls, err := h.urlService.ListURLsByUsername(r.Context(), username)
 	if err != nil {
-		http.Error(w, "url not found", http.StatusNotFound)
+		writeServiceError(w, err)
 		return
+	}
+	if urls == nil {
+		urls = []repo.ListURLsByUserRow{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -95,7 +116,7 @@ func (h *URLHandler) PostUrl(w http.ResponseWriter, r *http.Request) {
 		Interval: reqBody.Interval,
 	})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeServiceError(w, err)
 		return
 	}
 
