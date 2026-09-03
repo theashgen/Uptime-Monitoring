@@ -104,7 +104,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/repo.CreateUserRow"
+                            "$ref": "#/definitions/handler.SignUpResponse"
                         }
                     },
                     "400": {
@@ -149,7 +149,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/repo.ListURLsByUserRow"
+                                "$ref": "#/definitions/handler.UrlResponse"
                             }
                         }
                     },
@@ -197,7 +197,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.PostUrlBody"
+                            "$ref": "#/definitions/handler.PostUrlRequest"
                         }
                     }
                 ],
@@ -205,7 +205,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/repo.CreateURLRow"
+                            "$ref": "#/definitions/handler.PostUrlResponse"
                         }
                     },
                     "400": {
@@ -228,9 +228,81 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/urls/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Get a monitored URL's metadata and recent check history for the authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "urls"
+                ],
+                "summary": "Get URL status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "URL ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.GetUrlStatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid url id",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "username not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "url not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "handler.GetUrlStatusResponse": {
+            "type": "object",
+            "properties": {
+                "checks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.UrlCheckResponse"
+                    }
+                },
+                "url": {
+                    "$ref": "#/definitions/handler.UrlResponse"
+                }
+            }
+        },
         "handler.LoginResponse": {
             "type": "object",
             "properties": {
@@ -240,11 +312,82 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.PostUrlBody": {
+        "handler.PostUrlRequest": {
             "type": "object",
             "properties": {
                 "interval": {
                     "type": "integer"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.PostUrlResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "intervalSeconds": {
+                    "type": "integer"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.SignUpResponse": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.UrlCheckResponse": {
+            "type": "object",
+            "properties": {
+                "checkedAt": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "isUp": {
+                    "type": "boolean"
+                },
+                "responseTimeMs": {
+                    "type": "integer"
+                },
+                "statusCode": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.UrlResponse": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "intervalSeconds": {
+                    "type": "integer"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "nextCheckAt": {
+                    "type": "string"
                 },
                 "url": {
                     "type": "string"
@@ -272,44 +415,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "repo.CreateURLRow": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "string"
-                },
-                "intervalSeconds": {
-                    "type": "integer",
-                    "format": "int32"
-                },
-                "url": {
-                    "type": "string"
-                }
-            }
-        },
-        "repo.CreateUserRow": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "repo.ListURLsByUserRow": {
-            "type": "object",
-            "properties": {
-                "intervalSeconds": {
-                    "type": "integer",
-                    "format": "int32"
-                },
-                "url": {
                     "type": "string"
                 }
             }

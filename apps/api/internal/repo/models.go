@@ -10,28 +10,28 @@ import (
 )
 
 type Url struct {
-	ID              uuid.UUID
-	Url             string
-	IntervalSeconds int32
-	NextCheckAt     pgtype.Timestamptz
-	IsActive        bool
-	UserID          uuid.UUID
-	CreatedAt       pgtype.Timestamptz
+	ID              uuid.UUID          `json:"id"`
+	Url             string             `json:"url"`
+	IntervalSeconds int32              `json:"intervalSeconds"`
+	NextCheckAt     pgtype.Timestamptz `json:"nextCheckAt"`
+	IsActive        bool               `json:"isActive"`
+	UserID          uuid.UUID          `json:"userId"`
+	CreatedAt       pgtype.Timestamptz `json:"createdAt"`
 }
 
 type UrlCheck struct {
-	ID             uuid.UUID
-	UrlID          uuid.UUID
-	IsUp           bool
-	StatusCode     int
-	ResponseTimeMs int64
-	Error          *string
-	CheckedAt      pgtype.Timestamptz
+	ID             uuid.UUID          `json:"id"`
+	UrlID          uuid.UUID          `json:"urlId"`
+	IsUp           bool               `json:"isUp"`
+	StatusCode     int                `json:"statusCode"`
+	ResponseTimeMs int64              `json:"responseTimeMs"`
+	Error          *string            `json:"error"`
+	CheckedAt      pgtype.Timestamptz `json:"checkedAt"`
 }
 
 type User struct {
-	ID           uuid.UUID
-	Email        string
-	Username     string
-	Passwordhash string
+	ID           uuid.UUID `json:"id"`
+	Email        string    `json:"email"`
+	Username     string    `json:"username"`
+	Passwordhash string    `json:"passwordhash"`
 }

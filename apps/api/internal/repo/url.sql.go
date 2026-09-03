@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const claimDueURLs = `-- name: ClaimDueURLs :many
@@ -77,15 +78,15 @@ VALUES (
 `
 
 type CreateURLParams struct {
-	Url             string
-	IntervalSeconds int32
-	UserID          uuid.UUID
+	Url             string    `json:"url"`
+	IntervalSeconds int32     `json:"intervalSeconds"`
+	UserID          uuid.UUID `json:"userId"`
 }
 
 type CreateURLRow struct {
-	ID              uuid.UUID
-	Url             string
-	IntervalSeconds int32
+	ID              uuid.UUID `json:"id"`
+	Url             string    `json:"url"`
+	IntervalSeconds int32     `json:"intervalSeconds"`
 }
 
 func (q *Queries) CreateURL(ctx context.Context, arg CreateURLParams) (CreateURLRow, error) {
@@ -96,21 +97,93 @@ func (q *Queries) CreateURL(ctx context.Context, arg CreateURLParams) (CreateURL
 }
 
 type CreateURLChecksParams struct {
-	UrlID          uuid.UUID
-	IsUp           bool
-	StatusCode     int
-	ResponseTimeMs int64
-	Error          *string
+	UrlID          uuid.UUID `json:"urlId"`
+	IsUp           bool      `json:"isUp"`
+	StatusCode     int       `json:"statusCode"`
+	ResponseTimeMs int64     `json:"responseTimeMs"`
+	Error          *string   `json:"error"`
+}
+
+const getURLByID = `-- name: GetURLByID :one
+SELECT id, url, interval_seconds, next_check_at, is_active, user_id, created_at
+FROM urls
+WHERE id = $1 AND user_id = $2
+`
+
+type GetURLByIDParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"userId"`
+}
+
+func (q *Queries) GetURLByID(ctx context.Context, arg GetURLByIDParams) (Url, error) {
+	row := q.db.QueryRow(ctx, getURLByID, arg.ID, arg.UserID)
+	var i Url
+	err := row.Scan(
+		&i.ID,
+		&i.Url,
+		&i.IntervalSeconds,
+		&i.NextCheckAt,
+		&i.IsActive,
+		&i.UserID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const listURLChecksByURL = `-- name: ListURLChecksByURL :many
+SELECT id, url_id, is_up, status_code, response_time_ms, error, checked_at
+FROM url_checks
+WHERE url_id = $1
+ORDER BY checked_at DESC
+LIMIT $2
+`
+
+type ListURLChecksByURLParams struct {
+	UrlID uuid.UUID `json:"urlId"`
+	Limit int32     `json:"limit"`
+}
+
+func (q *Queries) ListURLChecksByURL(ctx context.Context, arg ListURLChecksByURLParams) ([]UrlCheck, error) {
+	rows, err := q.db.Query(ctx, listURLChecksByURL, arg.UrlID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []UrlCheck
+	for rows.Next() {
+		var i UrlCheck
+		if err := rows.Scan(
+			&i.ID,
+			&i.UrlID,
+			&i.IsUp,
+			&i.StatusCode,
+			&i.ResponseTimeMs,
+			&i.Error,
+			&i.CheckedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listURLsByUser = `-- name: ListURLsByUser :many
-SELECT url, interval_seconds FROM urls
+SELECT id, url, interval_seconds, next_check_at, is_active, created_at FROM urls
 WHERE user_id = $1
+ORDER BY created_at DESC
 `
 
 type ListURLsByUserRow struct {
-	Url             string
-	IntervalSeconds int32
+	ID              uuid.UUID          `json:"id"`
+	Url             string             `json:"url"`
+	IntervalSeconds int32              `json:"intervalSeconds"`
+	NextCheckAt     pgtype.Timestamptz `json:"nextCheckAt"`
+	IsActive        bool               `json:"isActive"`
+	CreatedAt       pgtype.Timestamptz `json:"createdAt"`
 }
 
 func (q *Queries) ListURLsByUser(ctx context.Context, userID uuid.UUID) ([]ListURLsByUserRow, error) {
@@ -122,7 +195,14 @@ func (q *Queries) ListURLsByUser(ctx context.Context, userID uuid.UUID) ([]ListU
 	var items []ListURLsByUserRow
 	for rows.Next() {
 		var i ListURLsByUserRow
-		if err := rows.Scan(&i.Url, &i.IntervalSeconds); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Url,
+			&i.IntervalSeconds,
+			&i.NextCheckAt,
+			&i.IsActive,
+			&i.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

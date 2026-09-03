@@ -20,6 +20,8 @@ Content-Type: application/json
 ### GET URL
 GET http://localhost:3000/api/v1/urls
 
+### GET URL by ID
+GET http://localhost:3000/api/v1/urls/bc905d0b-f5c2-4f0c-9f5e-6c0ed4031ce4
 
 ### POST URL
 POST http://localhost:3000/api/v1/urls

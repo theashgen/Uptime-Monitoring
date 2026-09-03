@@ -1,15 +1,70 @@
 basePath: /api/v1
 definitions:
+  handler.GetUrlStatusResponse:
+    properties:
+      checks:
+        items:
+          $ref: '#/definitions/handler.UrlCheckResponse'
+        type: array
+      url:
+        $ref: '#/definitions/handler.UrlResponse'
+    type: object
   handler.LoginResponse:
     properties:
       message:
         example: login successful
         type: string
     type: object
-  handler.PostUrlBody:
+  handler.PostUrlRequest:
     properties:
       interval:
         type: integer
+      url:
+        type: string
+    type: object
+  handler.PostUrlResponse:
+    properties:
+      id:
+        type: string
+      intervalSeconds:
+        type: integer
+      url:
+        type: string
+    type: object
+  handler.SignUpResponse:
+    properties:
+      email:
+        type: string
+      username:
+        type: string
+    type: object
+  handler.UrlCheckResponse:
+    properties:
+      checkedAt:
+        type: string
+      error:
+        type: string
+      id:
+        type: string
+      isUp:
+        type: boolean
+      responseTimeMs:
+        type: integer
+      statusCode:
+        type: integer
+    type: object
+  handler.UrlResponse:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+      intervalSeconds:
+        type: integer
+      isActive:
+        type: boolean
+      nextCheckAt:
+        type: string
       url:
         type: string
     type: object
@@ -27,31 +82,6 @@ definitions:
       password:
         type: string
       username:
-        type: string
-    type: object
-  repo.CreateURLRow:
-    properties:
-      id:
-        type: string
-      intervalSeconds:
-        format: int32
-        type: integer
-      url:
-        type: string
-    type: object
-  repo.CreateUserRow:
-    properties:
-      email:
-        type: string
-      username:
-        type: string
-    type: object
-  repo.ListURLsByUserRow:
-    properties:
-      intervalSeconds:
-        format: int32
-        type: integer
-      url:
         type: string
     type: object
 host: localhost:3000
@@ -120,7 +150,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/repo.CreateUserRow'
+            $ref: '#/definitions/handler.SignUpResponse'
         "400":
           description: Invalid json request
           schema:
@@ -146,7 +176,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/repo.ListURLsByUserRow'
+              $ref: '#/definitions/handler.UrlResponse'
             type: array
         "401":
           description: username not found
@@ -175,14 +205,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handler.PostUrlBody'
+          $ref: '#/definitions/handler.PostUrlRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/repo.CreateURLRow'
+            $ref: '#/definitions/handler.PostUrlResponse'
         "400":
           description: Invalid json input / interval should be greater than zero.
           schema:
@@ -198,6 +228,44 @@ paths:
       security:
       - CookieAuth: []
       summary: Post URL
+      tags:
+      - urls
+  /urls/{id}:
+    get:
+      description: Get a monitored URL's metadata and recent check history for the
+        authenticated user
+      parameters:
+      - description: URL ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.GetUrlStatusResponse'
+        "400":
+          description: invalid url id
+          schema:
+            type: string
+        "401":
+          description: username not found
+          schema:
+            type: string
+        "404":
+          description: url not found
+          schema:
+            type: string
+        "500":
+          description: internal server error
+          schema:
+            type: string
+      security:
+      - CookieAuth: []
+      summary: Get URL status
       tags:
       - urls
 securityDefinitions:

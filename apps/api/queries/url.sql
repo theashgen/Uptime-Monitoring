@@ -11,8 +11,21 @@ VALUES (
 ) RETURNING id, url, interval_seconds;
 
 -- name: ListURLsByUser :many
-SELECT url, interval_seconds FROM urls
-WHERE user_id = $1;
+SELECT id, url, interval_seconds, next_check_at, is_active, created_at FROM urls
+WHERE user_id = $1
+ORDER BY created_at DESC;
+
+-- name: GetURLByID :one
+SELECT id, url, interval_seconds, next_check_at, is_active, user_id, created_at
+FROM urls
+WHERE id = $1 AND user_id = $2;
+
+-- name: ListURLChecksByURL :many
+SELECT id, url_id, is_up, status_code, response_time_ms, error, checked_at
+FROM url_checks
+WHERE url_id = $1
+ORDER BY checked_at DESC
+LIMIT $2;
 
 -- name: ClaimDueURLs :many
 WITH due AS (

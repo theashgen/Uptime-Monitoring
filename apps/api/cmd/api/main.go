@@ -22,6 +22,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/joho/godotenv"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -65,7 +66,12 @@ func main() {
 	mux.HandleFunc("POST /api/v1/signup", userHandler.UserSignUp)
 	mux.HandleFunc("POST /api/v1/login", userHandler.UserLoginHandler)
 
-	handler := middleware.Logger(mux)
+	webOrigin := os.Getenv("WEB_ORIGIN")
+	if webOrigin == "" {
+		webOrigin = "http://localhost:3001"
+	}
+
+	handler := middleware.CORS(webOrigin)(middleware.Logger(mux))
 
 	mux.Handle("GET /api/v1/urls",
 		middleware.AuthMiddleware(urlHandler.GetUrls),
@@ -73,6 +79,10 @@ func main() {
 
 	mux.Handle("POST /api/v1/urls",
 		middleware.AuthMiddleware(urlHandler.PostUrl),
+	)
+
+	mux.Handle("GET /api/v1/urls/{id}",
+		middleware.AuthMiddleware(urlHandler.GetUrlStatus),
 	)
 
 	mux.HandleFunc("GET /swagger/", httpSwagger.WrapHandler)

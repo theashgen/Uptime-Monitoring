@@ -26,14 +26,14 @@ RETURNING email, username
 `
 
 type CreateUserParams struct {
-	Email        string
-	Passwordhash string
-	Username     string
+	Email        string `json:"email"`
+	Passwordhash string `json:"passwordhash"`
+	Username     string `json:"username"`
 }
 
 type CreateUserRow struct {
-	Email    string
-	Username string
+	Email    string `json:"email"`
+	Username string `json:"username"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
@@ -49,9 +49,9 @@ WHERE email = $1
 `
 
 type GetUserByEmailRow struct {
-	ID           uuid.UUID
-	Username     string
-	Passwordhash string
+	ID           uuid.UUID `json:"id"`
+	Username     string    `json:"username"`
+	Passwordhash string    `json:"passwordhash"`
 }
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
@@ -67,9 +67,9 @@ WHERE username = $1
 `
 
 type GetUserByUsernameRow struct {
-	ID       uuid.UUID
-	Email    string
-	Username string
+	ID       uuid.UUID `json:"id"`
+	Email    string    `json:"email"`
+	Username string    `json:"username"`
 }
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error) {
