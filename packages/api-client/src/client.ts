@@ -6,6 +6,7 @@ import type {
   MonitoredUrl,
   SignUpRequest,
   SignUpResponse,
+  UrlStatus,
 } from "./types"
 
 export class ApiError extends Error {
@@ -62,6 +63,9 @@ export function createApiClient({ baseUrl }: ApiClientOptions) {
       }),
 
     getUrls: () => request<MonitoredUrl[]>(baseUrl, "/api/v1/urls"),
+
+    getUrlStatus: (id: string) =>
+      request<UrlStatus>(baseUrl, `/api/v1/urls/${id}`),
 
     createUrl: (body: CreateUrlRequest) =>
       request<CreateUrlResponse>(baseUrl, "/api/v1/urls", {

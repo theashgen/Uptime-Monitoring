@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/theashgen/url-short/internal/auth"
-	_ "github.com/theashgen/url-short/internal/repo"
 	"github.com/theashgen/url-short/internal/service"
 )
 
@@ -31,7 +30,10 @@ type UserSignUpRequest struct {
 	Password string `json:"password"`
 }
 
-type UserSignRespones struct {
+// SignUpResponse is a handler-owned contract, deliberately separate from
+// repo.CreateUserRow, so a schema/query change doesn't automatically change
+// the API response shape.
+type SignUpResponse struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
 }
@@ -48,7 +50,7 @@ type LoginResponse struct {
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		handler.UserSignUpRequest	true	"Sign Up Request Body"
-//	@Success		200		{object}	repo.CreateUserRow
+//	@Success		200		{object}	handler.SignUpResponse
 //	@Failure		400		{string}	string	"Invalid json request"
 //	@Failure		409		{string}	string	"User already exists"
 //	@Failure		500		{string}	string	"Internal Server error"
@@ -69,7 +71,10 @@ func (h *UserHandler) UserSignUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(user)
+	err = json.NewEncoder(w).Encode(SignUpResponse{
+		Username: user.Username,
+		Email:    user.Email,
+	})
 	if err != nil {
 		w.Header().Set("Content-Type", "text/plain")
 		http.Error(w, "Internal Server error", http.StatusInternalServerError)
