@@ -1,0 +1,33 @@
+### SignUp New User
+POST http://localhost:3000/api/v1/signup
+Content-Type: application/json
+
+{
+    "username": "theashgen1234",
+    "email": "theashgen1234@gmail.com",
+    "password": "theashgen@2402"
+}
+
+### Login
+POST http://localhost:3000/api/v1/login
+Content-Type: application/json
+
+{
+    "email": "theashgen1234@gmail.com",
+    "password": "theashgen@2402"
+}
+
+### GET URL
+GET http://localhost:3000/api/v1/urls
+
+### GET URL by ID
+GET http://localhost:3000/api/v1/urls/bc905d0b-f5c2-4f0c-9f5e-6c0ed4031ce4
+
+### POST URL
+POST http://localhost:3000/api/v1/urls
+Content-Type: application/json
+
+{
+    "url": "lpu.ashwinsathiya.me/blogssss",
+    "interval": 10
+}
